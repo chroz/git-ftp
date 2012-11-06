@@ -1,10 +1,10 @@
 % GIT-FTP(1) git-ftp User Manual
 % Rene Moser <mail@renemoser.net>
-% December 23, 2010
+% 2012-08-06
 
 # NAME
 
-Git-ftp - FTP done the Git way 
+Git-ftp - Git powered FTP client written as shell script. 
 
 # SYNOPSIS
 
@@ -12,7 +12,7 @@ git-ftp [actions] [options] [url]...
 
 # DESCRIPTION
 
-This manual page documents briefly the git-ftp programm.
+This manual page documents briefly the git-ftp program.
 
 Git-ftp is a FTP client using Git to determine which local files to upload or which files should be deleted on the remote host. 
 
@@ -31,10 +31,16 @@ Another advantage is Git-ftp only handles files which are tracked with [Git].
 :	Uploads files which have changed since last upload.
 
 `catchup` 
-:	Uploads the .git-ftp.log file only. We have already uploaded the files to remote host with a different programm and want to remember its state by uploading the .git-ftp.log file.
+:	Uploads the .git-ftp.log file only. We have already uploaded the files to remote host with a different program and want to remember its state by uploading the .git-ftp.log file.
 
 `show`
 :	Downloads last uploaded SHA1 from log and hooks \`git show\`.
+
+`add-scope <scope>`
+:	Creates a new scope (e.g. dev, production, testing, foobar). This is a wrapper action over git-config. See **SCOPES** section for more information.
+
+`remove-scope <scope>`
+:	Remove a scope.
 
 `help`
 :	Prints a usage help.
@@ -53,13 +59,10 @@ Another advantage is Git-ftp only handles files which are tracked with [Git].
 `-a`, `--all`
 :	Uploads all files of current Git checkout.
 
-`-c`, `--commit`
-:	Sets the SHA1 hash of last deployed commit by option.
-
 `-A`, `--active`
 :	Uses FTP active mode.
 
-`-s <scope>`, `--scope <scope>`
+`-s [scope]`, `--scope [scope]`
 :	Using a scope (e.g. dev, production, testing, foobar). See **SCOPE** and **DEFAULTS** section for more information.
 
 `-l`, `--lock`
@@ -75,19 +78,22 @@ Another advantage is Git-ftp only handles files which are tracked with [Git].
 :	Be silent.
 
 `-h`, `--help`
-:	Prints some usage informations.
+:	Prints some usage information.
 
 `-v`, `--verbose`
-:	Be verbosy.
+:	Be verbose.
 
 `-vv`
-:	Be verbosy as much as possible.
+:	Be as verbose as possible. Useful for debug information.
 
 `--syncroot`
 :	Specifies a directory to sync from as if it were the git project root path.
 
-`--connections`
-:	Number of simultanious connections (Linux only).
+`--insecure`
+:	Don't verify server's certificate.
+
+`--cacert <file>`
+:	Use <file> as CA certificate store. Useful when a server has got a self-signed certificate. 
 
 `--version`
 :	Prints version.
@@ -120,14 +126,13 @@ But, there is not just FTP. Supported protocols are:
 
 Don't repeat yourself. Setting defaults for git-ftp in .git/config
 	
-	$ git config git-ftp.<(url|user|password)> <value>
+	$ git config git-ftp.<(url|user|password|syncroot|cacert)> <value>
 
 Everyone likes examples
 
 	$ git config git-ftp.user john
 	$ git config git-ftp.url ftp.example.com
 	$ git config git-ftp.password secr3t
-	$ git config git-ftp.connections 10
 	$ git config git-ftp.syncroot path/dir
 
 After setting those defaults, push to *john@ftp.example.com* is as simple as
@@ -140,7 +145,7 @@ Need different defaults per each system or environment? Use the so called scope 
 
 Useful if you use multi environment development. Like a development, testing and a production environment. 
 
-	$ git config git-ftp.<scope>.<(url|user|password)> <value>
+	$ git config git-ftp.<scope>.<(url|user|password|syncroot|cacert)> <value>
 
 So in the case below you would set a testing scope and a production scope.
 
@@ -155,7 +160,6 @@ Here we set the params for the scope "production"
 	$ git config git-ftp.production.url live.example.com
 	$ git config git-ftp.production.password n0tThatSimp3l
 
-
 Pushing to scope *testing* alias *john@ftp.testing.com:8080/foobar-path* using 
 password *simp3l*
 
@@ -168,27 +172,40 @@ password *n0tThatSimp3l*
 
 	$ git ftp push -s production
 
+*Hint:* If your scope name is identical with your branch name. You can skip the scope argument, e.g. if your current branch is "production":
 
-# IGNORING FILES
+	$ git ftp push -s
+
+You can also create scopes using the add-scope action. All settings can be defined in the URL.
+Here we create the *production* scope using add-scope
+
+	$ git ftp add-scope production ftp://manager:n0tThatSimp3l@live.example.com/foobar-path
+
+Deleting scopes is easy using the `remove-scope` action.
+
+	$ git ftp remove-scope production
+
+# IGNORING FILES TO BE SYNCED
 
 Add file names to `.git-ftp-ignore` to be ignored.
 
 Ignoring all in Directory `config`:
 
-	config/*
+	config/.*
 
 Ignoring all files having extension `.txt` in `./` :
 
-	*.txt
+	.*\.txt
 
 This ignores `a.txt` and `b.txt` but not `dir/c.txt`
 
-Ingnoring a single file called `gargantubrain.txt`:
+Ingnoring a single file called `foobar.txt`:
 
-	gargantubrain.txt
+	foobar\.txt
 
 
 # EXIT CODES
+
 There are a bunch of different error codes and their corresponding error messages that may appear during bad conditions. At the time of this writing, the exit codes are:
 
 `1`
